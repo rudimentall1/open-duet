@@ -98,6 +98,8 @@ def test_provider_prefixes_can_be_narrowed_without_breaking_explicit_opt_in():
 def test_provider_prefixes_are_not_inherited_when_disabled():
     env = {
         "PATH": "/bin",
+        "LC_ALL": "C",
+        "NPM_CONFIG_USERCONFIG": "/tmp/npmrc",
         "ANTHROPIC_API_KEY": "anthropic",
         "CLAUDE_CODE_OAUTH_TOKEN": "claude",
         "CODEX_HOME": "/codex",
@@ -109,4 +111,4 @@ def test_provider_prefixes_are_not_inherited_when_disabled():
         env,
         provider_prefixes=(),
         excluded_names=("GOOGLE_API_KEY",),
-    ) == {"PATH": "/bin"}
+    ) == {"PATH": "/bin", "LC_ALL": "C", "NPM_CONFIG_USERCONFIG": "/tmp/npmrc"}
