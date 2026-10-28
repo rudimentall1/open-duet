@@ -313,7 +313,9 @@ def _child_env(*, extra_names=(), extra_env=None, provider_prefixes=None, exclud
     # The CLI's own memory feature can save notes under ~/.claude/projects/,
     # outside the workspace and without asking. Not for runs this app starts;
     # the user's own use of the CLI is unaffected (only this process sees it).
-    env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
+    # This setting is specific to Claude CLI; do not leak it into generic ACP.
+    if provider_prefixes is None or "CLAUDE_" in provider_prefixes:
+        env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
     # Names this backend, so the next start can end what a hard kill left
     # running (app/core/engine_processes.py).
     return engine_processes.mark(env)
