@@ -38,10 +38,9 @@ _NAMES = frozenset(
 # The engines' own settings and provider keys. Cloud-account routes (AWS for
 # Bedrock, Google Cloud for Vertex, Azure) and `SSH_AUTH_SOCK` carry more than
 # a model key, so they are opt-in through `OPEN_DOTS_ENGINE_ENV`.
-_PREFIXES = (
-    "LC_", "XDG_", "NPM_CONFIG_", "npm_config_",
-    "ANTHROPIC_", "CLAUDE_", "CODEX_", "OPENAI_", "GEMINI_",
-)
+_GENERAL_PREFIXES = ("LC_", "XDG_", "NPM_CONFIG_", "npm_config_")
+_PROVIDER_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CODEX_", "OPENAI_", "GEMINI_")
+_PREFIXES = (*_GENERAL_PREFIXES, *_PROVIDER_PREFIXES)
 
 # Never passed, whatever the lists say: this app's own secrets and database settings.
 _NEVER = frozenset(
@@ -99,7 +98,9 @@ def engine_environment(
     source = os.environ if environ is None else environ
     operator_names, extra_prefixes = _extra(source)
     names = operator_names | frozenset(extra_names)
-    prefixes = _PREFIXES if provider_prefixes is None else tuple(provider_prefixes)
+    # General runtime/configuration prefixes stay available to every engine;
+    # only provider-specific prefixes are scoped per adapter.
+    prefixes = (*_GENERAL_PREFIXES, *(_PROVIDER_PREFIXES if provider_prefixes is None else tuple(provider_prefixes)))
     excluded = frozenset(excluded_names)
     kept: dict[str, str] = {}
     for name, value in source.items():
