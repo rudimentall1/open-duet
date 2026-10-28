@@ -294,6 +294,8 @@ def workspace_dir() -> Path:
 
 
 def _child_env(*, extra_names=(), extra_env=None, provider_prefixes=None, excluded_names=()) -> dict[str, str]:
+    if provider_prefixes is not None:
+        provider_prefixes = tuple(provider_prefixes)
     env = engine_environment(
         extra_names=extra_names,
         provider_prefixes=provider_prefixes,
