@@ -225,7 +225,13 @@ class AcpAdapter:
         return []
 
     def child_env(self, config: dict, ctx=None) -> dict:
-        return local_claude_runner.child_env()
+        # A generic ACP command is operator-selected and may be any executable.
+        # Do not hand it every provider's ambient API key by default. Operators
+        # can explicitly opt in required names through OPEN_DOTS_ENGINE_ENV.
+        return local_claude_runner.child_env(
+            provider_prefixes=(),
+            excluded_names=("GOOGLE_API_KEY",),
+        )
 
     def authenticate(self, methods: list, env: dict) -> str | None:
         return None
