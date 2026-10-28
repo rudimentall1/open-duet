@@ -286,7 +286,9 @@ class AcpAdapter:
             return EngineProbe(installed=True, ready=True)
         rpc = None
         try:
-            rpc = await StdioRpc.spawn(argv, cwd=str(Path.home()), max_bytes=2_000_000)
+            rpc = await StdioRpc.spawn(
+                argv, cwd=str(Path.home()), max_bytes=2_000_000, env=self.child_env(config)
+            )
             result = await asyncio.wait_for(rpc.request("initialize", _initialize_params()), PROBE_INIT_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:
             return EngineProbe(
