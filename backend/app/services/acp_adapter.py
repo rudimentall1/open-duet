@@ -12,7 +12,9 @@ conversation so far as text, so it still answers in context.
 
 The command is split like a shell would split it but never run through a
 shell. The agent is signed in from a terminal; this app has no sign-in step
-for it. It gets this app's environment without the app's own secrets, no file
+for it. It gets the standard engine environment allow-list, without this
+app's own secrets or ambient provider credentials by default. An operator can
+explicitly allow required names through `OPEN_DOTS_ENGINE_ENV`. It has no file
 system or terminal access through the client (both advertised as off), and
 no MCP servers.
 
