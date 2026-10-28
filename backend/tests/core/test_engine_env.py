@@ -72,3 +72,41 @@ async def test_scoped_values_reach_a_real_probe_process_only(monkeypatch):
     )
     assert result.ok and json.loads(result.stdout) == {"X_KEY": "saved", "SECRET_KEY": None}
     assert "X_KEY" not in child_env()
+
+
+
+def test_provider_prefixes_can_be_narrowed_without_breaking_explicit_opt_in():
+    env = {
+        "PATH": "/bin",
+        "ANTHROPIC_API_KEY": "anthropic",
+        "CODEX_HOME": "/codex",
+        "GOOGLE_API_KEY": "google",
+        "OPEN_DOTS_ENGINE_ENV": "ANTHROPIC_API_KEY,GOOGLE_API_KEY",
+    }
+    narrowed = engine_environment(
+        env,
+        provider_prefixes=(),
+        excluded_names=("GOOGLE_API_KEY",),
+    )
+    assert narrowed == {
+        "PATH": "/bin",
+        "ANTHROPIC_API_KEY": "anthropic",
+        "GOOGLE_API_KEY": "google",
+    }
+
+
+def test_provider_prefixes_are_not_inherited_when_disabled():
+    env = {
+        "PATH": "/bin",
+        "ANTHROPIC_API_KEY": "anthropic",
+        "CLAUDE_CODE_OAUTH_TOKEN": "claude",
+        "CODEX_HOME": "/codex",
+        "OPENAI_API_KEY": "openai",
+        "GEMINI_API_KEY": "gemini",
+        "GOOGLE_API_KEY": "google",
+    }
+    assert engine_environment(
+        env,
+        provider_prefixes=(),
+        excluded_names=("GOOGLE_API_KEY",),
+    ) == {"PATH": "/bin"}
