@@ -350,6 +350,7 @@ def test_generic_acp_child_environment_does_not_inherit_provider_credentials(mon
 
     child = AcpAdapter().child_env({"command": "fake-agent --acp"})
 
+    assert "CLAUDE_CODE_DISABLE_AUTO_MEMORY" not in child
     assert not {
         "ANTHROPIC_API_KEY",
         "CLAUDE_CODE_OAUTH_TOKEN",
