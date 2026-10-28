@@ -334,3 +334,38 @@ def test_config_validation_and_history_text():
     text = history_preamble(items, 2)
     assert "User: q" in text and "Assistant: a" in text and "now" not in text
     assert history_preamble(items[2:], 2) == ""
+
+
+
+def test_generic_acp_child_environment_does_not_inherit_provider_credentials(monkeypatch):
+    from app.services.acp_adapter import AcpAdapter
+
+    monkeypatch.delenv("OPEN_DOTS_ENGINE_ENV", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "synthetic-anthropic")
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "synthetic-claude")
+    monkeypatch.setenv("CODEX_HOME", "/synthetic-codex")
+    monkeypatch.setenv("OPENAI_API_KEY", "synthetic-openai")
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-gemini")
+    monkeypatch.setenv("GOOGLE_API_KEY", "synthetic-google")
+
+    child = AcpAdapter().child_env({"command": "fake-agent --acp"})
+
+    assert not {
+        "ANTHROPIC_API_KEY",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "CODEX_HOME",
+        "OPENAI_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+    } & child.keys()
+
+
+def test_generic_acp_can_receive_operator_opted_in_provider_credential(monkeypatch):
+    from app.services.acp_adapter import AcpAdapter
+
+    monkeypatch.setenv("OPEN_DOTS_ENGINE_ENV", "ANTHROPIC_API_KEY")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "synthetic-anthropic")
+
+    child = AcpAdapter().child_env({"command": "fake-agent --acp"})
+
+    assert child["ANTHROPIC_API_KEY"] == "synthetic-anthropic"
