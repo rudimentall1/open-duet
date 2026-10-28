@@ -293,26 +293,44 @@ def workspace_dir() -> Path:
     return workspace
 
 
-def _child_env(*, extra_names=(), extra_env=None) -> dict[str, str]:
-    env = engine_environment(extra_names=extra_names)
+def _child_env(*, extra_names=(), extra_env=None, provider_prefixes=None, excluded_names=()) -> dict[str, str]:
+    if provider_prefixes is not None:
+        provider_prefixes = tuple(provider_prefixes)
+    env = engine_environment(
+        extra_names=extra_names,
+        provider_prefixes=provider_prefixes,
+        excluded_names=excluded_names,
+    )
     if extra_env:
         # Values supplied by an adapter are scoped to this process. The
         # never-list still wins, including for explicit overrides.
-        env.update(engine_environment(extra_env, extra_names=extra_env))
+        env.update(
+            engine_environment(
+                extra_env,
+                extra_names=extra_env,
+                provider_prefixes=provider_prefixes,
+                excluded_names=excluded_names,
+            )
+        )
     # The CLI's own memory feature can save notes under ~/.claude/projects/,
     # outside the workspace and without asking. Not for runs this app starts;
     # the user's own use of the CLI is unaffected (only this process sees it).
-    env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
+    # This setting is specific to Claude CLI; do not leak it into generic ACP.
+    if provider_prefixes is None or "CLAUDE_" in provider_prefixes:
+        env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
     # Names this backend, so the next start can end what a hard kill left
     # running (app/core/engine_processes.py).
     return engine_processes.mark(env)
 
 
-def child_env(*, extra_names=(), extra_env=None) -> dict[str, str]:
-    """The environment for any engine process this app starts: the names
-    an engine needs (app/core/engine_env.py), not this process's whole
-    environment."""
-    return _child_env(extra_names=extra_names, extra_env=extra_env)
+def child_env(*, extra_names=(), extra_env=None, provider_prefixes=None, excluded_names=()) -> dict[str, str]:
+    """The environment for an engine process, with optional adapter-specific scoping."""
+    return _child_env(
+        extra_names=extra_names,
+        extra_env=extra_env,
+        provider_prefixes=provider_prefixes,
+        excluded_names=excluded_names,
+    )
 
 
 def _kill_tree(proc: subprocess.Popen) -> None:

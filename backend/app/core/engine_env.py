@@ -38,10 +38,9 @@ _NAMES = frozenset(
 # The engines' own settings and provider keys. Cloud-account routes (AWS for
 # Bedrock, Google Cloud for Vertex, Azure) and `SSH_AUTH_SOCK` carry more than
 # a model key, so they are opt-in through `OPEN_DOTS_ENGINE_ENV`.
-_PREFIXES = (
-    "LC_", "XDG_", "NPM_CONFIG_", "npm_config_",
-    "ANTHROPIC_", "CLAUDE_", "CODEX_", "OPENAI_", "GEMINI_",
-)
+_GENERAL_PREFIXES = ("LC_", "XDG_", "NPM_CONFIG_", "npm_config_")
+_PROVIDER_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CODEX_", "OPENAI_", "GEMINI_")
+_PREFIXES = (*_GENERAL_PREFIXES, *_PROVIDER_PREFIXES)
 
 # Never passed, whatever the lists say: this app's own secrets and database settings.
 _NEVER = frozenset(
@@ -83,16 +82,33 @@ def allows(name: str, environ: Mapping[str, str] | None = None) -> bool:
 
 
 def engine_environment(
-    environ: Mapping[str, str] | None = None, *, extra_names: Iterable[str] = ()
+    environ: Mapping[str, str] | None = None,
+    *,
+    extra_names: Iterable[str] = (),
+    provider_prefixes: Iterable[str] | None = None,
+    excluded_names: Iterable[str] = (),
 ) -> dict[str, str]:
-    """The allowed names of `environ` (default: this process's), in a fresh dict."""
+    """Build an engine environment, optionally narrowing ambient provider credentials.
+
+    `provider_prefixes=None` preserves the standard engine allow-list. Adapters
+    such as generic ACP can pass an empty iterable and explicitly exclude
+    provider-specific names. Operator entries in OPEN_DOTS_ENGINE_ENV and
+    adapter-supplied exact names remain opt-ins, but the never-list always wins.
+    """
     source = os.environ if environ is None else environ
     operator_names, extra_prefixes = _extra(source)
     names = operator_names | frozenset(extra_names)
+    # General runtime/configuration prefixes stay available to every engine;
+    # only provider-specific prefixes are scoped per adapter.
+    prefixes = (*_GENERAL_PREFIXES, *(_PROVIDER_PREFIXES if provider_prefixes is None else tuple(provider_prefixes)))
+    excluded = frozenset(excluded_names)
     kept: dict[str, str] = {}
     for name, value in source.items():
         if _never(name):
             continue
-        if name in _NAMES or name.startswith(_PREFIXES) or name in names or name.startswith(extra_prefixes):
+        explicitly_allowed = name in names or name.startswith(extra_prefixes)
+        if name in excluded and not explicitly_allowed:
+            continue
+        if name in _NAMES or name.startswith(prefixes) or explicitly_allowed:
             kept[name] = value
     return kept
