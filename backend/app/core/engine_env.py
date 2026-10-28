@@ -83,16 +83,31 @@ def allows(name: str, environ: Mapping[str, str] | None = None) -> bool:
 
 
 def engine_environment(
-    environ: Mapping[str, str] | None = None, *, extra_names: Iterable[str] = ()
+    environ: Mapping[str, str] | None = None,
+    *,
+    extra_names: Iterable[str] = (),
+    provider_prefixes: Iterable[str] | None = None,
+    excluded_names: Iterable[str] = (),
 ) -> dict[str, str]:
-    """The allowed names of `environ` (default: this process's), in a fresh dict."""
+    """Build an engine environment, optionally narrowing ambient provider credentials.
+
+    `provider_prefixes=None` preserves the standard engine allow-list. Adapters
+    such as generic ACP can pass an empty iterable and explicitly exclude
+    provider-specific names. Operator entries in OPEN_DOTS_ENGINE_ENV and
+    adapter-supplied exact names remain opt-ins, but the never-list always wins.
+    """
     source = os.environ if environ is None else environ
     operator_names, extra_prefixes = _extra(source)
     names = operator_names | frozenset(extra_names)
+    prefixes = _PREFIXES if provider_prefixes is None else tuple(provider_prefixes)
+    excluded = frozenset(excluded_names)
     kept: dict[str, str] = {}
     for name, value in source.items():
         if _never(name):
             continue
-        if name in _NAMES or name.startswith(_PREFIXES) or name in names or name.startswith(extra_prefixes):
+        explicitly_allowed = name in names or name.startswith(extra_prefixes)
+        if name in excluded and not explicitly_allowed:
+            continue
+        if name in _NAMES or name.startswith(prefixes) or explicitly_allowed:
             kept[name] = value
     return kept
